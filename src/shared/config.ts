@@ -1,6 +1,9 @@
 export const appConfig = {
   appName: "mesh-silent-vote",
   storagePrefix: "mesh-silent-vote",
+  description:
+    "Peer-to-peer mesh: ranked-choice or approval voting on a list of options. Replaces Doodle Premium and surveillance polling tools.",
+  accentHex: "#7aa2ff",
   version: __APP_VERSION__,
   commit: __GIT_COMMIT__,
   repositoryUrl: "https://github.com/baditaflorin/mesh-silent-vote",
