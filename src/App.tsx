@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { VoteRoom } from "./features/vote/VoteRoom";
 import { SettingsDrawer } from "./features/settings/SettingsDrawer";
 import { appConfig } from "./shared/config";
-import { InviteShareButton } from "@baditaflorin/mesh-common";
+import { InviteShareButton, MeshBeacon } from "@baditaflorin/mesh-common";
 
 const STORAGE = {
   room: `${appConfig.storagePrefix}:room`,
@@ -35,6 +35,8 @@ export function App() {
       <VoteRoom roomId={roomId} peerId={peerId} />
 
       <InviteShareButton appName={appConfig.appName} roomId={roomId} />
+      <MeshBeacon app={appConfig.appName} room={roomId} />
+
       <button
         type="button"
         className="settings-fab"
