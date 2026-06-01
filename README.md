@@ -9,7 +9,7 @@
 
 **Live:** https://baditaflorin.github.io/mesh-silent-vote/
 
-Open the link on every phone. Pick a room. The host enters the options and the voting mode. Everyone votes on their phone. Tap "Reveal" to see the chart. Tally runs locally — no central counter.
+Open the link on every phone (or just two browser tabs to try it). Pick a room. Anyone opens ⚙ Settings, types the options, picks a mode (ranked / approval / score), and presses **Start round** — there's no host, the round replicates to every phone. Everyone votes on their own phone. Tap **Reveal** to see the chart. The tally runs locally on each phone — no central counter.
 
 ## How it works
 

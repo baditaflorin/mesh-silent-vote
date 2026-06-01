@@ -147,8 +147,19 @@ export function VoteRoom({ roomId, peerId }: Props) {
 
       {round.options.length === 0 && (
         <div className="vote-empty">
-          <h2>No round configured</h2>
-          <p>Open Settings to enter the options and pick a voting mode.</p>
+          <h2>No round yet</h2>
+          <p>
+            Open <strong>⚙ Settings</strong> to type the options (one per line) and pick a mode,
+            then press <strong>Start round</strong>. Anyone in the room can do this — there&rsquo;s
+            no host.
+          </p>
+          {peerCount === 0 && (
+            <p className="vote-solo-hint">
+              You&rsquo;re the only phone in room <code>{roomId}</code>. Open this page on another
+              phone (or a second browser tab) in the same room to vote together — use the 📡 button
+              to share a join link.
+            </p>
+          )}
         </div>
       )}
 

@@ -189,3 +189,72 @@ test("aggregate score tally averages both peers' scores across the mesh", async 
     await cleanup();
   }
 });
+
+test("ranked-choice (IRV) runs over BOTH peers' rankings across the mesh", async ({
+  browser,
+  baseURL,
+}) => {
+  // Ranked / instant-runoff is the README's headline mode but had no cross-peer
+  // coverage. The reveal renders each option's first-place count from the
+  // replicated set of rankings. With two distinct rankings, two options each
+  // hold one first-place vote — only reachable if BOTH ballots crossed the mesh.
+  const { a, b, cleanup } = await openTwoVoters(
+    browser,
+    baseURL ?? "",
+    `e2e-ranked-${Math.random().toString(36).slice(2, 8)}`,
+  );
+  try {
+    await join(a);
+    await join(b);
+
+    await a.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("vote:set-round", {
+          detail: { options: ["Alpha", "Beta", "Gamma"], mode: "ranked" },
+        }),
+      );
+    });
+
+    // Ranked round config must propagate to the peer that never touched settings.
+    await expect(b.getByText(/Top = first choice/i)).toBeVisible();
+    await expect(a.getByText(/Top = first choice/i)).toBeVisible();
+
+    // A ballot is only written once a peer reorders. The list starts as
+    // [Alpha, Beta, Gamma]; moving a row's "▲" up swaps it with the row above.
+    // Peer A promotes Beta to the top → first choice Beta.
+    const promoteToSecondThenFirst = async (page: Page, optionLabel: string) => {
+      const row = page.locator(".vote-ranked li", { hasText: optionLabel });
+      // Beta is at index 1, one "Move up" lands it at the top.
+      await row.getByRole("button", { name: /move up/i }).click();
+    };
+    await promoteToSecondThenFirst(a, "Beta");
+
+    // Peer B reorders too (so it casts a distinct ballot) but keeps Alpha first:
+    // promote Gamma above Beta → [Alpha, Gamma, Beta], first choice still Alpha.
+    {
+      const gammaRow = b.locator(".vote-ranked li", { hasText: "Gamma" });
+      await gammaRow.getByRole("button", { name: /move up/i }).click();
+    }
+
+    // Both peers must see 2 ballots — proves both rankings replicated under
+    // distinct per-peer keys, not stranded in local state.
+    await expect(a.locator(".vote-hud")).toContainText("2 ballots");
+    await expect(b.locator(".vote-hud")).toContainText("2 ballots");
+
+    await b.getByRole("button", { name: /reveal results/i }).click();
+
+    // First-place tally on peer B: Alpha (B's first) = 1, Beta (A's first) = 1,
+    // Gamma = 0. If peer B only counted its own ballot, Beta would be 0.
+    const bAlpha = b.locator(".vote-bars li", { hasText: "Alpha" });
+    const bBeta = b.locator(".vote-bars li", { hasText: "Beta" });
+    const bGamma = b.locator(".vote-bars li", { hasText: "Gamma" });
+    await expect(bAlpha.locator(".vote-bar-val")).toHaveText("1");
+    await expect(bBeta.locator(".vote-bar-val")).toHaveText("1");
+    await expect(bGamma.locator(".vote-bar-val")).toHaveText("0");
+
+    // And the IRV elimination log is shown (Gamma is eliminated first with 0).
+    await expect(b.locator(".vote-rounds")).toContainText(/Eliminated/i);
+  } finally {
+    await cleanup();
+  }
+});
