@@ -28,7 +28,9 @@ function tallyApproval(options: string[], ballots: Ballot[]): TallyResult {
   const rows = options
     .map((o) => ({ option: o, value: counts[o] ?? 0, label: String(counts[o] ?? 0) }))
     .sort((a, b) => b.value - a.value || a.option.localeCompare(b.option));
-  return { winner: rows[0]?.option ?? null, rows };
+  // Do not present an alphabetical fallback as a "winner" before anyone has
+  // voted. A visible result must be supported by at least one ballot.
+  return { winner: rows.some((row) => row.value > 0) ? (rows[0]?.option ?? null) : null, rows };
 }
 
 function tallyScore(options: string[], ballots: Ballot[]): TallyResult {
@@ -58,7 +60,7 @@ function tallyScore(options: string[], ballots: Ballot[]): TallyResult {
       };
     })
     .sort((a, b) => b.value - a.value || a.option.localeCompare(b.option));
-  return { winner: rows[0]?.option ?? null, rows };
+  return { winner: rows.some((row) => row.value > 0) ? (rows[0]?.option ?? null) : null, rows };
 }
 
 function tallyRanked(options: string[], ballots: Ballot[]): TallyResult {
@@ -71,7 +73,11 @@ function tallyRanked(options: string[], ballots: Ballot[]): TallyResult {
   for (let safety = 0; safety < options.length; safety++) {
     const counts = countFirstPlace([...active], ballots, options);
     const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
-    if (active.size <= 1 || totalVotes === 0) {
+    if (totalVotes === 0) {
+      winner = null;
+      break;
+    }
+    if (active.size <= 1) {
       // pick the only/best remaining option
       const sorted = [...active].sort(
         (a, b) => (counts[b] ?? 0) - (counts[a] ?? 0) || a.localeCompare(b),

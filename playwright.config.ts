@@ -13,6 +13,11 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: false,
+  // The shared-room suite deliberately opens two peers that exercise the
+  // BroadcastChannel fallback. Keeping files serial prevents separate test
+  // workers from competing for the same local preview and producing a false
+  // mesh failure on Woodpecker (which does not export the usual CI variable).
+  workers: 1,
   reporter: process.env["CI"] ? "list" : [["list"], ["json", { outputFile: "test-results.json" }]],
   use: {
     baseURL,

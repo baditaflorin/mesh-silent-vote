@@ -23,6 +23,7 @@ function ensurePeerId(): string {
 
 export function App() {
   const [roomId, setRoomId] = useState(() => readString(STORAGE.room, "default"));
+  const [roomOpen, setRoomOpen] = useState(false);
   const peerId = useMemo(() => ensurePeerId(), []);
 
   useEffect(() => {
@@ -34,9 +35,14 @@ export function App() {
       config={appConfig}
       roomId={roomId}
       onRoomChange={setRoomId}
-      settingsExtras={<SettingsExtras />}
+      settingsExtras={<SettingsExtras roomOpen={roomOpen} />}
     >
-      <VoteRoom roomId={roomId} peerId={peerId} />
+      <VoteRoom
+        roomId={roomId}
+        peerId={peerId}
+        roomOpen={roomOpen}
+        onOpenRoom={() => setRoomOpen(true)}
+      />
     </MeshShell>
   );
 }
