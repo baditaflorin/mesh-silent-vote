@@ -1,0 +1,21 @@
+when:
+  event:
+    - push
+    - pull_request
+
+steps:
+  verify:
+    image: node:22-bookworm
+    commands:
+      - git clone --depth 1 https://github.com/baditaflorin/mesh-common.git ../mesh-common
+      - npm ci --prefix ../mesh-common
+      - npm ci
+      - npx playwright install --with-deps chromium
+      - npm run fmt:check
+      - npm run typecheck
+      - npm run test:unit
+      - npm run smoke
+      - npm run test:e2e
+      - MESH_LEAK_DURATION_MS=5000 MESH_LEAK_NOISE_OPS=25 npm run test:leak
+      - npm audit --audit-level=high
+      - npm run audit:security
