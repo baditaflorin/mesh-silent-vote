@@ -1,5 +1,6 @@
 export const appConfig = {
   appName: "mesh-silent-vote",
+  breadcrumbs: false,
   displayName: "Quiet Vote",
   visualProfile: "gather",
   shellLayout: "inset",
