@@ -23,8 +23,10 @@ const storagePrefix = pkg.name;
  * would collide on the same `ballots` Y.Map key — silently producing a single
  * aggregated ballot. We give each page a DISTINCT, deterministic device id by
  * overriding `crypto.randomUUID` per page BEFORE the app boots, modelling two
- * real phones. A 2-ballot aggregate is only reachable if the two ballots live
- * under distinct keys AND replicate across the mesh.
+ * real phones. Each page receives its id before the app boots, and the pages
+ * open in sequence so their intentionally shared test storage cannot race the
+ * identity write. A 2-ballot aggregate is only reachable if the two ballots
+ * live under distinct keys AND replicate across the mesh.
  */
 async function openTwoVoters(
   browser: Browser,
@@ -41,8 +43,6 @@ async function openTwoVoters(
         localStorage.setItem(`${prefix}:room`, room);
         localStorage.setItem(`${prefix}:signalingUrl`, sig);
         localStorage.removeItem(`${prefix}:iceServers`);
-        // Clear any persisted device id so each page mints its own below.
-        localStorage.removeItem(`${prefix}:peerId`);
       } catch {
         /* ignore */
       }
@@ -51,21 +51,25 @@ async function openTwoVoters(
   );
 
   const pinDeviceId = (id: string) =>
-    // Force ensurePeerId() to mint this exact id (it calls crypto.randomUUID()).
-    `(() => { const real = crypto.randomUUID.bind(crypto);
-       crypto.randomUUID = () => ${JSON.stringify(id)}; void real; })();`;
+    // Model one stable device identity per page. Using storage directly avoids
+    // a timing race where parallel navigations can both read the same freshly
+    // minted id from their shared BrowserContext localStorage.
+    `(() => { try { localStorage.setItem(${JSON.stringify(`${storagePrefix}:peerId`)}, ${JSON.stringify(id)}); } catch {} })();`;
 
   const a = await context.newPage();
   await a.addInitScript(pinDeviceId("device-A"));
   const b = await context.newPage();
   await b.addInitScript(pinDeviceId("device-B"));
 
-  await Promise.all([a.goto(url), b.goto(url)]);
+  // A and B deliberately share one context for BroadcastChannel mesh sync,
+  // but boot serially so B cannot overwrite A's id before A reads it.
+  await a.goto(url);
+  await b.goto(url);
   return { a, b, cleanup: () => context.close() };
 }
 
 async function join(page: Page) {
-  await page.getByRole("button", { name: /join room/i }).click();
+  await page.getByRole("button", { name: "Enter this decision room" }).click();
   await expect(page.locator(".vote-stage")).toBeVisible();
 }
 
@@ -106,7 +110,7 @@ test("aggregate approval tally reflects BOTH peers' ballots across the mesh", as
     await expect(b.locator(".vote-hud")).toContainText("2 ballots");
 
     // Reveal on peer B and read the AGGREGATE off peer B's screen.
-    await b.getByRole("button", { name: /reveal results/i }).click();
+    await b.getByRole("button", { name: /reveal the room tally/i }).click();
 
     const bPizza = b.locator(".vote-bars li", { hasText: "Pizza" });
     const bSushi = b.locator(".vote-bars li", { hasText: "Sushi" });
@@ -178,7 +182,7 @@ test("aggregate score tally averages both peers' scores across the mesh", async 
     await expect(a.locator(".vote-hud")).toContainText("2 ballots");
     await expect(b.locator(".vote-hud")).toContainText("2 ballots");
 
-    await b.getByRole("button", { name: /reveal results/i }).click();
+    await b.getByRole("button", { name: /reveal the room tally/i }).click();
 
     const bAlpha = b.locator(".vote-bars li", { hasText: "Alpha" });
     const bBeta = b.locator(".vote-bars li", { hasText: "Beta" });
@@ -225,7 +229,7 @@ test("ranked-choice (IRV) runs over BOTH peers' rankings across the mesh", async
     const promoteToSecondThenFirst = async (page: Page, optionLabel: string) => {
       const row = page.locator(".vote-ranked li", { hasText: optionLabel });
       // Beta is at index 1, one "Move up" lands it at the top.
-      await row.getByRole("button", { name: /move up/i }).click();
+      await row.getByRole("button", { name: new RegExp(`move ${optionLabel} up`, "i") }).click();
     };
     await promoteToSecondThenFirst(a, "Beta");
 
@@ -233,7 +237,7 @@ test("ranked-choice (IRV) runs over BOTH peers' rankings across the mesh", async
     // promote Gamma above Beta → [Alpha, Gamma, Beta], first choice still Alpha.
     {
       const gammaRow = b.locator(".vote-ranked li", { hasText: "Gamma" });
-      await gammaRow.getByRole("button", { name: /move up/i }).click();
+      await gammaRow.getByRole("button", { name: /move Gamma up/i }).click();
     }
 
     // Both peers must see 2 ballots — proves both rankings replicated under
@@ -241,7 +245,7 @@ test("ranked-choice (IRV) runs over BOTH peers' rankings across the mesh", async
     await expect(a.locator(".vote-hud")).toContainText("2 ballots");
     await expect(b.locator(".vote-hud")).toContainText("2 ballots");
 
-    await b.getByRole("button", { name: /reveal results/i }).click();
+    await b.getByRole("button", { name: /reveal the room tally/i }).click();
 
     // First-place tally on peer B: Alpha (B's first) = 1, Beta (A's first) = 1,
     // Gamma = 0. If peer B only counted its own ballot, Beta would be 0.

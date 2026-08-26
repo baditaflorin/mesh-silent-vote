@@ -1,7 +1,7 @@
 {
   "name": "mesh-silent-vote",
   "version": "0.1.1",
-  "description": "Peer-to-peer mesh: ranked-choice or approval voting on a list of options. Replaces Doodle Premium and surveillance polling tools.",
+  "description": "A peer-to-peer room for transparent ranked, approval, and score decisions. Every participant can inspect the shared ballots.",
   "type": "module",
   "private": false,
   "homepage": "https://baditaflorin.github.io/mesh-silent-vote/",
@@ -28,6 +28,9 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:install": "playwright install chromium",
+    "screenshot": "SCREENSHOT_SCRIPT=tests/demo/screenshot.mjs bash ../mesh-common/scripts/screenshot-app.sh",
+    "demo": "bash ../mesh-common/scripts/record-demo.sh",
+    "audit:security": "bash ../mesh-common/scripts/audit-app-security.sh",
     "test:leak": "MESH_RUN_LEAK_TEST=1 playwright test tests/e2e/memory-leak.spec.ts"
   },
   "dependencies": {
@@ -45,8 +48,8 @@
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
     "vite": "^7.0.0",
-    "vitest": "^2.1.0",
-    "@playwright/test": "^1.50.0",
+    "vitest": "^4.1.11",
+    "@playwright/test": "1.60.0",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.1.0",
     "jsdom": "^26.0.0"

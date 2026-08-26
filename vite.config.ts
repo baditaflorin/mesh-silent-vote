@@ -3,7 +3,7 @@ import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const commit = env.VITE_GIT_COMMIT || env.GITHUB_SHA || "local";
+  const commit = env.VITE_GIT_COMMIT || env.CI_COMMIT_SHA || env.GITHUB_SHA || "local";
   const version = env.VITE_APP_VERSION || process.env.npm_package_version || "0.1.0";
 
   return {
